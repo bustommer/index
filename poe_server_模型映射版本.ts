@@ -3,22 +3,30 @@ import { serve } from "https://deno.land/std@0.224.0/http/server.ts";
 
 const UPSTREAM_API = "https://api.poe.com/v1/chat/completions";
 
-// 配置对象，包含模型映射和额外参数列表
+// 配置对象，包含模型映射、额外参数列表和模型默认参数
 let config: {
   modelMapping: Record<string, string>;
   extraBodyParams: string[];
-} = { modelMapping: {}, extraBodyParams: [] };
+  modelDefaultParams: Record<string, Record<string, any>>;
+} = { modelMapping: {}, extraBodyParams: [], modelDefaultParams: {} };
 
 // 加载配置文件
 async function loadConfig() {
   try {
     const configText = await Deno.readTextFile("config.json");
-    config = JSON.parse(configText);
+    const loadedConfig = JSON.parse(configText);
+    
+    // 加载各项配置，提供默认值防止配置缺失
+    config.modelMapping = loadedConfig.modelMapping || {};
+    config.extraBodyParams = loadedConfig.extraBodyParams || [];
+    config.modelDefaultParams = loadedConfig.modelDefaultParams || {};
+    
     console.log(`已加载 ${Object.keys(config.modelMapping).length} 个模型映射`);
     console.log(`已加载 ${config.extraBodyParams.length} 个额外参数:`, config.extraBodyParams);
+    console.log(`已加载 ${Object.keys(config.modelDefaultParams).length} 个模型的默认参数`);
   } catch {
     console.warn("无法加载 config.json，将使用空映射");
-    config = { modelMapping: {}, extraBodyParams: [] };
+    config = { modelMapping: {}, extraBodyParams: [], modelDefaultParams: {} };
   }
 }
 
@@ -73,6 +81,28 @@ function filterRequestBody(body: any) {
   // 如果用户已经提供了 extra_body，需要合并
   if (body.extra_body && typeof body.extra_body === 'object') {
     Object.assign(extraBody, body.extra_body);
+  }
+  
+  // 应用模型默认参数
+  const originalModel = body.model;
+  if (originalModel && config.modelDefaultParams?.[originalModel]) {
+    const defaults = config.modelDefaultParams[originalModel];
+    for (const [param, defaultValue] of Object.entries(defaults)) {
+      // 检查用户是否已传入该参数（直接传入或已在 extra_body 中）
+      const isSetInBody = body[param] !== undefined;
+      const isSetInExtraBody = extraBody[param] !== undefined;
+      
+      if (!isSetInBody && !isSetInExtraBody) {
+        // 参数未设置，应用默认值
+        if (config.extraBodyParams.includes(param)) {
+          // 如果是 extraBodyParam，放入 extraBody
+          extraBody[param] = defaultValue;
+        } else {
+          // 否则直接放入 result
+          result[param] = defaultValue;
+        }
+      }
+    }
   }
   
   // 如果有额外的参数，添加到 extra_body
