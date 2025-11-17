@@ -89,5 +89,10 @@
     "thinking_budget",
     "aspect_ratio",
     "aspect"
-  ]
+  ],
+  "modelDefaultParams": {
+    "gemini-2.5-pro": {
+      "thinking_budget": 0
+    }
+  }
 }
