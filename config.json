@@ -1,5 +1,7 @@
 {
   "modelMapping": {
+  "gemini-3.0-pro": "gemini-3.0-pro",
+  "gemini-2.5-pro": "gemini-2.5-pro",
   "gemini-2.5-flash-image": "nano-banana",
   "gemini-2.5-flash-image-preview": "nano-banana",
   "claude-3-5-sonnet-coder": "claude-sonnet-3.5",
@@ -92,6 +94,9 @@
   ],
   "modelDefaultParams": {
     "gemini-2.5-pro": {
+      "thinking_budget": 0
+    },
+    "gemini-3.0-pro": {
       "thinking_budget": 0
     }
   }
